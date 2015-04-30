@@ -22,38 +22,40 @@
   return-stmt -> return sexp
   callfunc-stmt -> (identifiers | nil)
 ]]
-local tkoperator = {'%', '*', '/', '+', '-', '<', '<=', '>', '>=', '!=', '==', 'or', 'and'}
-local operatortable = {}
-operatortable[2] = {
-	['%'] = operator_mod,
-	['*'] = operator_mul,
-	['/'] = operator_div
-}
 
-operatortable[3] = {
-	['+'] = operator_add, 
-	['-'] = operator_sub
-}
+local tkfloat = 'tkfloat'
+local tkstring = 'tkstring'
+local tkoperator = 'tkoperator'
+local tkleftbracket = 'tkleftbracket' --(
+local tkrightbracket = 'tkrightbracket'--)
+local tkleftsquarebracket = 'tkleftsquarebracket' --[
+local tkrightsquarebracket = 'tkrightsquarebracket' --]
+local tkleftbrace = 'tkleftbrace'--{
+local tkrightbrace = 'tkrightbrace'--}
+local tkdot = 'tkdot'
+local tkand = 'tkand'
+local tkor = 'tkor'
+local tknot = 'tknot'
+local tkmod = 'tkmod'
+local tkdiv = 'tkdiv'
+local tkmul = 'tkmul'
+local tkadd = 'tkadd'
+local tksub = 'tksub'
+local tkeq = 'tkeq'
+local tkless = 'tkless'
+local tklesseq = 'tklesseq'
+local tkbig = 'tkbig'
+local tkbigeq = 'tkbigeq'
+local tkassign = 'tkassign'
 
-operatortable[5] = {
-	['<'] = operator_less, 
-	['<='] = operator_lesseq,
-	['>'] = operator_big,
-	['>='] = operator_bigeq
-}
+local lex = require "lex"
+local m = {}
 
-operatortable[6] = {
-	['!='] = operator_noteq,
-	['=='] = operator_eq
-}
+function m.parser(source)
+  lex.load(source)
+  
+end
 
-operatortable[7] = {
-	['or'] = operator_or
-}
-
-operatortable[8] = {
-	['and'] = operator_and
-}
 
 function operator_add()
 end

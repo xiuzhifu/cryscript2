@@ -1,37 +1,4 @@
---[[ bnf
-  program -> stmt-sequence
-  stmt-sequence -> stmt-sequence;statement|statement
-  statement -> for-stmt|if-stmt| while- stmt| assign-stmt| read-stmt| write-stmt | funcstmt | var-stmt| return-stmt
-  if-stmt -> if logicexp then stmt-sequence end | if exp then stmt-sequence else stmt-sequence end
-  while-stmt-> while logicexp do stmt-sequence end
-  assign-stmt -> identifiers = sexp|identifiers|callfunc-stmt|object-stmt
-  read-stmt-> read identifier
-  write- stmt -> write logicexp
-  logicexp -> sexp logicop sexp
-  logicop-> <|>|=|>=|<=
-  sexp-> term asop term|term
-  term -> factor mdop factor|factor|callfun-stmt|funcstmt|
-  factor-> (exp)|num|identifier|string
-  asop-> +|-
-  mdop-> *|/|%
-  num->0..9
-  identifier-> _identifiernum|a..zidentifiernum|A..Zidentifiernum
-  identifiers-> identifier| identifier,stmt_assign
-  funcstmt ->  function (identifiers | nil ) begin  stmt-sequence | nil end
-  var-stmt -> var assign-stmt
-  return-stmt -> return sexp
-  callfunc-stmt -> (identifiers | nil)
-]]
-
 local m ={}
-
-local function isoperator(w)
-	local operator = {'%', '*', '/', '+', '-', '<', '<=', '>', '>=', '!=', '==', 'or', 'and'}
-	for _, v in pairs(operator) do
-		if w == v then return true end
-	end
-	return false
-end
 
 local function islower(w)
 	local words = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'}
@@ -77,9 +44,9 @@ m.line = 1
 m.source = ''
 m.current = 1
 
-m.tokenstring = ''
+m.nextstring = ''
 m.currentstring = ''
---定义一系列常量，方便使用
+--define series ver for easily using 
 local tkend = 'tkend'
 local tkident = 'tkident'
 local tknumber = 'tknumber'
@@ -92,9 +59,29 @@ local tkleftsquarebracket = 'tkleftsquarebracket' --[
 local tkrightsquarebracket = 'tkrightsquarebracket' --]
 local tkleftbrace = 'tkleftbrace'--{
 local tkrightbrace = 'tkrightbrace'--}
+local tkdot = 'tkdot'
+local tkand = 'tkand'
+local tkor = 'tkor'
+local tknot = 'tknot'
+local tkmod = 'tkmod'
+local tkdiv = 'tkdiv'
+local tkmul = 'tkmul'
+local tkadd = 'tkadd'
+local tksub = 'tksub'
+local tkeq = 'tkeq'
+local tkless = 'tkless'
+local tklesseq = 'tklesseq'
+local tkbig = 'tkbig'
+local tkbigeq = 'tkbigeq'
+local tkassign = 'tkassign'
 
-function m.getnexttokenstring()
-	return m.tokenstring
+
+m[tkand] = tkand
+m[tkor] = tkor
+m[tknot] = tknot
+
+function m.getnextstring()
+	return m.nextstring
 end
 
 function m.getcurrentstring()
@@ -109,20 +96,17 @@ function m.incline()
 	m.line = m.line + 1
 end
 
-function m.lex(source)
-	m.source = source..' ' -- add a space to easily using isend function
+function m.load(source)
+	m.source = source..' ' -- add a space for easily using isend function
 	m.length = string.len(source)
 end
 
 function m.skipblankspace()
 	local w = string.sub(m.source, m.current, m.current)
-	if (w == ' ' or w == '\n' or w == '\r') and m.next() then
+	if (w == ' ' or w == '\n' or w == '\r' or w == ';') and m.next() then
 		m.skipblankspace()
 		if w == '\n' then m.incline() end
 	end 
-end
-
-	function m.match(token)
 end
 
 function m.next()
@@ -142,7 +126,7 @@ local function lex_number()
 		elseif isdigit(w) and m.next() then
 			return w .. lex_number()
 		else
-			m.error('error number: '..m.tokenstring..w)
+			m.error('number: '..m.tokenstring..w)
 		end
 	end
 	return string.sub(lex_number_sub(), 1, -1)
@@ -157,7 +141,7 @@ local function lex_string()
 		elseif m.next() then
 			return w .. lex_string_sub(b)
 		else
-			m.error('error string: '..m.tokenstring..w)
+			m.error('string: '..m.tokenstring..w)
 		end
 	end
 	local w = string.sub(m.source, m.current, m.current)
@@ -177,17 +161,44 @@ local function lex_ident()
 	elseif (isalnum(w) or w == '_') and m.next() then
 		return w .. lex_ident()
 	else
-		m.error('error ident: '..m.tokenstring..w)
+		m.error('ident: '..m.tokenstring..w)
 	end
 end
 m[tkident] = lex_ident
 
-function m.getnexttoken()
+local simpletokentable = {
+	['('] = function() return tkleftbracket end,
+	[')'] = function() return tkrightbracket end,
+	['['] = function() return tkleftsquarebracket end,
+	[']'] = function() return tkrightsquarebracket end,
+	['{'] = function() return tkleftbrace  end,
+	['}'] = function() return tkrightbrace end,
+	['.'] = function() return tkdot end,
+	['%'] = function() return tkmod end,
+	['*'] = function() return tkmul end,
+	['/'] = function() return tkdiv end,
+	['+'] = function() return tkadd end,
+	['-'] = function() return tksub end,
+	['<'] = function() 
+		local w = string.sub(m.source, m.current + 1, m.current + 1)
+		if w == '=' then m.current = m.current + 1 return tklesseq else return tkless end
+	end,
+	['>'] = function()
+		local w = string.sub(m.source, m.current + 1, m.current + 1)
+		if w == '=' then m.current = m.current + 1 return tkbigeq else return tkbig end
+	end,
+	['='] = function()
+		local w = string.sub(m.source, m.current + 1, m.current + 1)
+		if w == '=' then m.current = m.current + 1 return tkeq  else return tkassign end
+	end
+}
+
+function m.getnexttoken(b)
 	if m.isend() then return tkend end
 	m.skipblankspace()
-	m.tokenstring = ''
 	local state
 	local w = string.sub(m.source, m.current, m.current)
+	local c = m.current
 	if w == '"' or w == "'"  then
 		state = tkstring
 	elseif isdigit(w) then
@@ -197,21 +208,52 @@ function m.getnexttoken()
 	elseif isoperator(w) then
 		state = tkoperator
 	end
-	print(state, m[tknumber])
-	m.tokenstring = m[state]()
+	-- print(state, m[tknumber])
+	if state then
+		m.nextstring = m[state]()
+		if state == tkident and m[m.nextstring] then state = m[m.nextstring] end
+	elseif simpletokentable[w] then
+		state = simpletokentable[w]()
+		m.current = m.current + 1
+	else
+		m.error("getnexttoken() don't match that token")
+	end
+
+	if not b then m.current = c end
 	return state
+end
+
+function m.match(token)
+	if not token == m.getnexttoken(true) then m.error("match :"..token) end
 end
 m.source = '12345 "anmeng" _zim23llin'..' '
 m.length = string.len(m.source)
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.tokenstring)
+print(m.getnextstring())
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.tokenstring)
+print(m.getnextstring())
 
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.tokenstring)
+print(m.getnextstring())
 
+
+m.match()
+m.tokenstring = m.tokenstring
+print(m.getnextstring())
+m.match()
+m.tokenstring = m.tokenstring
+print(m.getnextstring())
+
+m.match()
+m.tokenstring = m.tokenstring
+print(m.getnextstring())
+
+for k,v in pairs(_ENV) do
+	print(k,v)
+end
+
+return m 
 
