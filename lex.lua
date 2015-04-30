@@ -62,7 +62,8 @@ local function isdigit(w)
 end
 
 local function isalnum(w)
-	return isalpha() or isdigit()
+	return isalpha(w) or isdigit(w)
+end
 
 local function isseparator(w)
 	if w == '\'' or w == '\n' then return true else return false end 
@@ -77,6 +78,7 @@ m.source = ''
 m.current = 1
 
 m.tokenstring = ''
+m.currentstring = ''
 --定义一系列常量，方便使用
 local tkend = 'tkend'
 local tkident = 'tkident'
@@ -84,11 +86,19 @@ local tknumber = 'tknumber'
 local tkfloat = 'tkfloat'
 local tkstring = 'tkstring'
 local tkoperator = 'tkoperator'
+local tkleftbracket = 'tkleftbracket' --(
+local tkrightbracket = 'tkrightbracket'--)
+local tkleftsquarebracket = 'tkleftsquarebracket' --[
+local tkrightsquarebracket = 'tkrightsquarebracket' --]
+local tkleftbrace = 'tkleftbrace'--{
+local tkrightbrace = 'tkrightbrace'--}
 
 function m.getnexttokenstring()
+	return m.tokenstring
 end
 
 function m.getcurrentstring()
+	return m.currentstring
 end
 
 function m.error(e)
@@ -106,8 +116,9 @@ end
 
 function m.skipblankspace()
 	local w = string.sub(m.source, m.current, m.current)
-	if w == ' ' and m.next() then 
+	if (w == ' ' or w == '\n' or w == '\r') and m.next() then
 		m.skipblankspace()
+		if w == '\n' then m.incline() end
 	end 
 end
 
@@ -134,23 +145,54 @@ local function lex_number()
 			m.error('error number: '..m.tokenstring..w)
 		end
 	end
-	return string.sub(lex_number_sub(), 1, -2)
+	return string.sub(lex_number_sub(), 1, -1)
 end
-
 m[tknumber] = lex_number
 
 local function lex_string()
+	function lex_string_sub(b)
+		local w = string.sub(m.source, m.current, m.current)
+		if w == b then
+			return ''
+		elseif m.next() then
+			return w .. lex_string_sub(b)
+		else
+			m.error('error string: '..m.tokenstring..w)
+		end
+	end
+	local w = string.sub(m.source, m.current, m.current)
+	if w == '"' or w == "'" then
+		m.next()
+		local s = lex_string_sub(w)
+		m.next()
+		return s
+	end 
+end
+m[tkstring] = lex_string
+
+local function lex_ident()
+	local w = string.sub(m.source, m.current, m.current)
+	if isblankspace(w) then
+		return ''
+	elseif (isalnum(w) or w == '_') and m.next() then
+		return w .. lex_ident()
+	else
+		m.error('error ident: '..m.tokenstring..w)
+	end
+end
+m[tkident] = lex_ident
 
 function m.getnexttoken()
 	if m.isend() then return tkend end
 	m.skipblankspace()
+	m.tokenstring = ''
 	local state
 	local w = string.sub(m.source, m.current, m.current)
-	if w == '\'' or w == '\"' then
+	if w == '"' or w == "'"  then
 		state = tkstring
 	elseif isdigit(w) then
 		state = tknumber
-	elseif isalpha(w) then
+	elseif isalpha(w) or '_' then
 		state = tkident
 	elseif isoperator(w) then
 		state = tkoperator
@@ -159,10 +201,17 @@ function m.getnexttoken()
 	m.tokenstring = m[state]()
 	return state
 end
-m.source = '12345 '
-m.length = 6
+m.source = '12345 "anmeng" _zim23llin'..' '
+m.length = string.len(m.source)
 m.getnexttoken()
-m.tokenstring = m.tokenstring..'!'
+m.tokenstring = m.tokenstring
+print(m.tokenstring)
+m.getnexttoken()
+m.tokenstring = m.tokenstring
+print(m.tokenstring)
+
+m.getnexttoken()
+m.tokenstring = m.tokenstring
 print(m.tokenstring)
 
 
