@@ -76,11 +76,14 @@ local tkuneq = 'tkuneq'
 local tkassign = 'tkassign'
 local tkcomma ='tkcomma'
 local tkclass = 'tkclass'
+local tkfunction = 'tkfunction'
+local tkobject = 'tkobject'
 
 
-m[tkand] = tkand
-m[tkor] = tkor
-m[tknot] = tknot
+m[tkand] = 'and'
+m[tkor] = 'or'
+m[tknot] = 'not'
+m[tkfunction] = 'function'
 
 function m.gettokenstring()
 	return m.tokenstring
@@ -203,7 +206,7 @@ function m.getnexttoken(b)
 	m.skipblankspace()
 	local state
 	local w = string.sub(m.source, m.current, m.current)
-	local c = m.current
+	local c, l = m.current, m.line
 	if w == '"' or w == "'"  then
 		state = tkstring
 	elseif isdigit(w) then
@@ -230,8 +233,11 @@ function m.getnexttoken(b)
 		m.error("getnexttoken() don't match that token")
 	end
 
-	if not b then m.current = c end
-	return state
+	if not b then 
+		m.current = c
+		m.line, l = l, m.line
+	end
+	return state, l
 end
 
 function m.match(token)

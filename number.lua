@@ -4,4 +4,4 @@ local Number.value = 0
 local function Number.to_s()
 	return tostring(Number.value)
 end
-return Object
+return Number
