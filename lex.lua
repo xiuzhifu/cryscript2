@@ -44,8 +44,7 @@ m.line = 1
 m.source = ''
 m.current = 1
 
-m.nextstring = ''
-m.currentstring = ''
+m.tokenstring = ''
 --define series ver for easily using 
 local tkend = 'tkend'
 local tkident = 'tkident'
@@ -73,19 +72,18 @@ local tkless = 'tkless'
 local tklesseq = 'tklesseq'
 local tkbig = 'tkbig'
 local tkbigeq = 'tkbigeq'
+local tkuneq = 'tkuneq'
 local tkassign = 'tkassign'
+local tkcomma ='tkcomma'
+local tkclass = 'tkclass'
 
 
 m[tkand] = tkand
 m[tkor] = tkor
 m[tknot] = tknot
 
-function m.getnextstring()
-	return m.nextstring
-end
-
-function m.getcurrentstring()
-	return m.currentstring
+function m.gettokenstring()
+	return m.tokenstring
 end
 
 function m.error(e)
@@ -179,9 +177,16 @@ local simpletokentable = {
 	['/'] = function() return tkdiv end,
 	['+'] = function() return tkadd end,
 	['-'] = function() return tksub end,
+	[','] = function() return tkcomma end,
 	['<'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
-		if w == '=' then m.current = m.current + 1 return tklesseq else return tkless end
+		if w == '=' then 
+			m.current = m.current + 1 return tklesseq 
+		elseif w == '>' then 
+			m.current = m.current + 1 return tkuneq
+		else 
+			return tkless 
+		end
 	end,
 	['>'] = function()
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
@@ -210,8 +215,14 @@ function m.getnexttoken(b)
 	end
 	-- print(state, m[tknumber])
 	if state then
-		m.nextstring = m[state]()
-		if state == tkident and m[m.nextstring] then state = m[m.nextstring] end
+		m.tokenstring = m[state]()
+		if state == tkident then
+			if isupper(string.sub(m.tokenstring, 1, 1)) then
+				return tkclass
+			elseif m[m.tokenstring] then 
+				state = m[m.tokenstring] 
+			end
+		end
 	elseif simpletokentable[w] then
 		state = simpletokentable[w]()
 		m.current = m.current + 1
@@ -230,30 +241,26 @@ m.source = '12345 "anmeng" _zim23llin'..' '
 m.length = string.len(m.source)
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
+print(m.gettokenstring())
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
+print(m.gettokenstring())
 
 m.getnexttoken()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
+print(m.gettokenstring())
 
 
 m.match()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
+print(m.gettokenstring())
 m.match()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
+print(m.gettokenstring())
 
 m.match()
 m.tokenstring = m.tokenstring
-print(m.getnextstring())
-
-for k,v in pairs(_ENV) do
-	print(k,v)
-end
+print(m.gettokenstring())
 
 return m 
 
