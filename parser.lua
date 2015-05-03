@@ -1,7 +1,7 @@
 --[[ bnf
   block -> statement
   statement -> assign-stmt| callfun-stmt
-  assign-stmt -> object-stmt{, object-stmt}  = sexp {, sexp}
+  assign-stmt -> object-stmt{, object-stmt}  = exp {, exp}
   exp-> term1 logicop term1|term1
   term1-> term asop term|term
   term -> factor mdop factor|factor
@@ -12,7 +12,7 @@
   logicop-> <|>|=|>=|<=
   string->"xxoo"
   func-stmt ->  function ({statement})   end
-  return-stmt -> return sexp
+  return-stmt -> return exp
   callfunc-stmt -> object-stmt({statement})|  object-stmt {statement} | object-stmt({statement}) {block}
   object-stmt -> Object functionname| Object.functionname|functionname(Object)| Object
 ]]
@@ -63,12 +63,11 @@ end
 
 function m.parser(source)
   lex.load(source)
-  while true do
+  --while true do
     local token = lex.getnexttoken() 
-    if token == tkend then break end
+    -- if token == tkend then break end
     m.statement()
-    end
-  end
+  --end
 end
 
 --statement -> assign-stmt| callfun-stmt | return-stmt
@@ -76,20 +75,19 @@ function m.statement()
 	local token = lex.getnexttoken()
 	if token == tkclass then
 		m.callfunction_statement(tkclass)
-	elseif token = tkassign then
+	elseif token == tkassign then
 		m.assign_statement()
 	elseif token == tkident then
 		m.callfunction_statement(tkident)
+	elseif token == tknumber then
+		m.exp_statement()
 	else
 		m.error('statement() unknown token: '..token)
-end
-
-local function function_statement( ... )
-
+	end
 end
 
 --object-stmt ->Object functionname [functionname]|Object.functionname[.functionname]|functionname(Object)| Object
-local function m.object_statement(token)
+function m.object_statement(token)
   lex.match(token)
   local classname = lex.gettokenstring()
   local token = lex.getnexttoken()
@@ -106,16 +104,13 @@ local function m.object_statement(token)
 	elseif token == tkident then 	--O = Object new
 		while token == tkident do
 			lex.match(tkident)
-			table.instert(classfunction, lex.gettokenstring())
+			table.insert(classfunction, lex.gettokenstring())
 			token = lex.getnexttoken()
 		end
 		emitter.emit_object(classname, classfunction)
 	else--O = Object
 		emitter.emit_object(classname)
 	end
-	else
-		m.error('object_statement() :'..token)
-	end																		
 end
 
 function m.block_statement()
@@ -132,26 +127,16 @@ function m.string()
   return lex.gettokenstring()
 end
 
---factor-> (exp)|num|identifier|string|callfun-stmt
-function m.factor_statement()
-  local token = lex.getnexttoken()
-  if token == tknumber then
-  if token == tkclass then
-  elseif token == tkstring then
-  elseif token == tkident then
-  elseif token == tkleftbracket then
-  end 
-end
-
 -- assign-stmt -> object-stmt{, object-stmt}  = sexp {, sexp}
 function m.assign_statement()
 	lex.match(tkassign)
 	m.exp_statement()
 end
 
--- exp = callfunc-stmt|object-stmt
 function m.exp_statement()
-  -- body
+	local tk, s = m.term_statement()
+	local token = lex.getnexttoken()
+
 end
 
 -- func-stmt ->  function ({statement})   end
@@ -175,16 +160,61 @@ function m.callfunction_statement(token)
 		lex.match(tkrightbrace)
 	end
 end
+
+--factor-> (exp)|num|identifier|string|callfun-stmt
+function m.factor_statement()
+  local token = lex.getnexttoken()
+  if token == tknumber then
+  	lex.match(tknumber)
+  	--print(lex.gettokenstring())
+  	return tknumber, lex.gettokenstring()
+  elseif token == tkclass then
+  elseif token == tkstring then
+  elseif token == tkident then
+  elseif token == tkleftbracket then
+  end 
+end
+
+local otleveltable = {}
+local otlen = #OperatorTable
+local terms = {}
+local operators = {}
+--term-> term1 asop(+-) term1|term1
+ --term1 -> factor mdop(*/) factor|factor
 function m.gen_operator_parser()
-  local otleveltable = {}
-  function gen_operator_level()
-    local otlen = #OperatorTable
-    local ii = 1
-    for i,v in pairs(OperatorTable) do
-      otleveltable[ii] = i
-      ii = ii + 1 
-    end
-  end
-  gen_operator_level()
+	  function gen_operator_level()
+	    local ii = 1
+	    for i,v in pairs(OperatorTable) do
+	      otleveltable[ii] = i
+	      ii = ii + 1 
+	    end
+	  end
+
+	function gen_term_statement(i)
+		return function()
+			local tk1, s1 = terms[i + 1]()
+			while true do
+				local token = lex.getnexttoken()
+				if OperatorTable.isinthislevel(token, otleveltable[i]) then
+					-- operators[i]()
+					lex.match(token)
+					local tk2, s2 = terms[i + 1]()
+					print(token, tk1, s1, tk2, s2)
+					-- return tk2, s2
+				else
+					break
+				end
+			end
+			return tk1, s1
+		end
+	end
+	gen_operator_level()
+	for i=1,otlen do
+		terms[i] = gen_term_statement(i)
+	end
+	m.term_statement = terms[1]
+	terms[otlen + 1] = m.factor_statement
 end
 m.gen_operator_parser()
+m.parser("1+2*3-4")
+

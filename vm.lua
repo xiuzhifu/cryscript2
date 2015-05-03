@@ -1,4 +1,4 @@
-lcoal vm = {}
+local vm = {}
 
 function vm.execute()
 	-- body

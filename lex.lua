@@ -112,7 +112,8 @@ end
 
 function m.next()
 	m.current = m.current + 1
-	return not m.isend()
+	--return not m.isend()
+	return true
 end
 
 function m.isend()
@@ -122,15 +123,16 @@ end
 local function lex_number()
 	function lex_number_sub()
 		local w = string.sub(m.source, m.current, m.current)
-		if isblankspace(w) then
+		if isblankspace(w) or m.isaoperator(w) then
 			return ''
 		elseif isdigit(w) and m.next() then
-			return w .. lex_number()
+			return w .. lex_number_sub()
 		else
-			m.error('number: '..m.tokenstring..w)
+			m.error('number: '..w)
 		end
 	end
-	return string.sub(lex_number_sub(), 1, -1)
+	--return string.sub(lex_number_sub(), 1, -1)
+	return lex_number_sub()
 end
 m[tknumber] = lex_number
 
@@ -157,7 +159,7 @@ m[tkstring] = lex_string
 
 local function lex_ident()
 	local w = string.sub(m.source, m.current, m.current)
-	if isblankspace(w) then
+	if isblankspace(w) or m.isaoperator(w)then
 		return ''
 	elseif (isalnum(w) or w == '_') and m.next() then
 		return w .. lex_ident()
@@ -168,42 +170,46 @@ end
 m[tkident] = lex_ident
 
 local simpletokentable = {
-	['('] = function() return tkleftbracket end,
-	[')'] = function() return tkrightbracket end,
-	['['] = function() return tkleftsquarebracket end,
-	[']'] = function() return tkrightsquarebracket end,
-	['{'] = function() return tkleftbrace  end,
-	['}'] = function() return tkrightbrace end,
-	['.'] = function() return tkdot end,
-	['%'] = function() return tkmod end,
-	['*'] = function() return tkmul end,
-	['/'] = function() return tkdiv end,
-	['+'] = function() return tkadd end,
-	['-'] = function() return tksub end,
-	[','] = function() return tkcomma end,
+	['('] = function() return tkleftbracket, '('  end,
+	[')'] = function() return tkrightbracket, ')' end,
+	['['] = function() return tkleftsquarebracket, '[' end,
+	[']'] = function() return tkrightsquarebracket, ']' end,
+	['{'] = function() return tkleftbrace, '{' end,
+	['}'] = function() return tkrightbrace, '}' end,
+	['.'] = function() return tkdot, '.' end,
+	['%'] = function() return tkmod, '%' end,
+	['*'] = function() return tkmul, '*' end,
+	['/'] = function() return tkdiv, '/' end,
+	['+'] = function() return tkadd, '+' end,
+	['-'] = function() return tksub, '-' end,
+	[','] = function() return tkcomma, ',' end,
 	['<'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
 		if w == '=' then 
-			m.current = m.current + 1 return tklesseq 
+			m.current = m.current + 1 return tklesseq, '<='
 		elseif w == '>' then 
-			m.current = m.current + 1 return tkuneq
+			m.current = m.current + 1 return tkuneq, '<>'
 		else 
-			return tkless 
+			return tkless, '<'
 		end
 	end,
 	['>'] = function()
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
-		if w == '=' then m.current = m.current + 1 return tkbigeq else return tkbig end
+		if w == '=' then m.current = m.current + 1 return tkbigeq, '>=' else return tkbig, '>' end
 	end,
 	['='] = function()
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
-		if w == '=' then m.current = m.current + 1 return tkeq  else return tkassign end
+		if w == '=' then m.current = m.current + 1 return tkeq, '=='  else return tkassign, '=' end
 	end
 }
 
+function m.isaoperator(w)
+	if simpletokentable[w] then return true else return false end	
+end
+
 function m.getnexttoken(b)
-	if m.isend() then return tkend end
 	m.skipblankspace()
+	if m.isend() then return tkend end
 	local state
 	local w = string.sub(m.source, m.current, m.current)
 	local c, l = m.current, m.line
@@ -211,10 +217,8 @@ function m.getnexttoken(b)
 		state = tkstring
 	elseif isdigit(w) then
 		state = tknumber
-	elseif isalpha(w) or '_' then
+	elseif isalpha(w) or w == '_' then
 		state = tkident
-	elseif isoperator(w) then
-		state = tkoperator
 	end
 	-- print(state, m[tknumber])
 	if state then
@@ -227,7 +231,7 @@ function m.getnexttoken(b)
 			end
 		end
 	elseif simpletokentable[w] then
-		state = simpletokentable[w]()
+		state, m.tokenstring = simpletokentable[w]()
 		m.current = m.current + 1
 	else
 		m.error("getnexttoken() don't match that token")
@@ -243,30 +247,12 @@ end
 function m.match(token)
 	if not token == m.getnexttoken(true) then m.error("match :"..token) end
 end
-m.source = '12345 "anmeng" _zim23llin'..' '
-m.length = string.len(m.source)
-m.getnexttoken()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-m.getnexttoken()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-
-m.getnexttoken()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-
-
-m.match()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-m.match()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-
-m.match()
-m.tokenstring = m.tokenstring
-print(m.gettokenstring())
-
+-- m.load("1 + 2 * 3 - 4 ")
+-- while true do
+-- 	local tk = m.getnexttoken()
+-- 	print(m.gettokenstring(), tk)
+-- 	m.match(tk)
+-- 	if tk ==  tkend then break end
+-- 	end
 return m 
 

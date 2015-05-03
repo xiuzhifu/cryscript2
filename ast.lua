@@ -30,5 +30,3 @@ end
 function ast.getcurrentnode()
 	return ast.current
 end
-
-function ast.j
