@@ -17,40 +17,6 @@
   object-stmt -> Object functionname| Object.functionname|functionname(Object)| Object
 ]]
 
-local tkend = 'tkend'
-local tkident = 'tkident'
-local tknumber = 'tknumber'
-local tkfloat = 'tkfloat'
-local tkstring = 'tkstring'
-local tkoperator = 'tkoperator'
-local tkleftbracket = 'tkleftbracket' --(
-local tkrightbracket = 'tkrightbracket'--)
-local tkleftsquarebracket = 'tkleftsquarebracket' --[
-local tkrightsquarebracket = 'tkrightsquarebracket' --]
-local tkleftbrace = 'tkleftbrace'--{
-local tkrightbrace = 'tkrightbrace'--}
-local tkdot = 'tkdot'
-local tkand = 'tkand'
-local tkor = 'tkor'
-local tknot = 'tknot'
-local tkmod = 'tkmod'
-local tkdiv = 'tkdiv'
-local tkmul = 'tkmul'
-local tkadd = 'tkadd'
-local tksub = 'tksub'
-local tkeq = 'tkeq'
-local tkless = 'tkless'
-local tklesseq = 'tklesseq'
-local tkbig = 'tkbig'
-local tkbigeq = 'tkbigeq'
-local tkuneq = 'tkuneq'
-local tkassign = 'tkassign'
-local tkcomma ='tkcomma'
-local tkclass = 'tkclass'
-local tkfunction = 'tkfunction'
-
-local Object = require "object"
-local Number = require "number"
 local OperatorTable = require "OperatorTable"
 
 local lex = require "lex"
@@ -63,11 +29,12 @@ end
 
 function m.parser(source)
   lex.load(source)
-  --while true do
+  while true do
     local token = lex.getnexttoken() 
-    -- if token == tkend then break end
+    if token == tkend then break end
     m.statement()
-  --end
+  end
+  print("parser ended")
 end
 
 --statement -> assign-stmt| callfun-stmt | return-stmt
@@ -90,7 +57,8 @@ end
 function m.object_statement(token)
   lex.match(token)
   local classname = lex.gettokenstring()
-  local token = lex.getnexttoken()
+  local l = lex.line
+  local token, c = lex.getnexttoken()
   local classfunction = {}
   --like O = Object or O = Object new or O = Object.new or O = new(Object)lex.match(tkassign)
 	if token == tkdot then	--O = Object.new
@@ -100,16 +68,17 @@ function m.object_statement(token)
 			table.instert(classfunction, lex.gettokenstring())
 			token = lex.getnexttoken()
 		end
-		emitter.emit_object(classname, classfunction)
+		return emitter.emit_object(classname, classfunction)
 	elseif token == tkident then 	--O = Object new
-		while token == tkident do
+		while l == c and token == tkident do
 			lex.match(tkident)
 			table.insert(classfunction, lex.gettokenstring())
-			token = lex.getnexttoken()
+      l = lex.line
+			token, c = lex.getnexttoken()
 		end
-		emitter.emit_object(classname, classfunction)
+		return emitter.emit_object(classname, classfunction)
 	else--O = Object
-		emitter.emit_object(classname)
+		return emitter.emit_object(classname)
 	end
 end
 
@@ -119,12 +88,12 @@ end
 
 function m.number()
   lex.match(tknumber)
-  return lex.gettokenstring()
+  return tknumber, lex.gettokenstring()
 end
 
 function m.string()
   lex.match(tkstring)
-  return lex.gettokenstring()
+  return tkstring, lex.gettokenstring()
 end
 
 -- assign-stmt -> object-stmt{, object-stmt}  = sexp {, sexp}
@@ -135,7 +104,14 @@ end
 
 function m.exp_statement()
 	local tk, s = m.term_statement()
-	local token = lex.getnexttoken()
+  print(tk, s)
+  local c = lex.line
+	local token, l = lex.getnexttoken()
+  print(c, l)
+  if c == l and token == tkident then
+    lex.match(token)
+    emitter.emit_callfunction(tk, s, lex.gettokenstring())
+  end
 
 end
 
@@ -165,12 +141,13 @@ end
 function m.factor_statement()
   local token = lex.getnexttoken()
   if token == tknumber then
-  	lex.match(tknumber)
-  	--print(lex.gettokenstring())
-  	return tknumber, lex.gettokenstring()
+  	return m.number()
   elseif token == tkclass then
+    return m.callfunction_statement(tkclass)
   elseif token == tkstring then
+    return m.string()
   elseif token == tkident then
+    return m.callfunction_statement(tkident)
   elseif token == tkleftbracket then
   end 
 end
@@ -195,12 +172,12 @@ function m.gen_operator_parser()
 			local tk1, s1 = terms[i + 1]()
 			while true do
 				local token = lex.getnexttoken()
-				if OperatorTable.isinthislevel(token, otleveltable[i]) then
-					-- operators[i]()
+        local b, op = OperatorTable.isinthislevel(token, otleveltable[i]) 
+				if b then
 					lex.match(token)
 					local tk2, s2 = terms[i + 1]()
-					print(token, tk1, s1, tk2, s2)
-					-- return tk2, s2
+          print(token, tk1, s1, tk2, s2)
+          tk1, s1 = emitter.emit_exp(op, tk1, s1, tk2, s2)
 				else
 					break
 				end
@@ -216,5 +193,7 @@ function m.gen_operator_parser()
 	terms[otlen + 1] = m.factor_statement
 end
 m.gen_operator_parser()
-m.parser("1+2*3-4")
+m.parser("O = Object new ")
+local vm =  require 'vm'
+vm.execute()
 

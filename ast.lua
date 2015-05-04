@@ -3,7 +3,7 @@ local node = {}
 
 function ast.newnode()
   local t = setmetatable({}, node)
-  t.__index = node
+  t.type = 'Node'
   return t
 end
 
@@ -30,3 +30,4 @@ end
 function ast.getcurrentnode()
 	return ast.current
 end
+return ast

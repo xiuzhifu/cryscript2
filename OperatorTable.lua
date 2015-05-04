@@ -1,15 +1,47 @@
+require "lex"
 local Object = require "object"
+local Number = require "Number"
 local OperatorTable = Object.new()
 
 local OperatorTable = {}
 
-local function operator_add()
+local function operator_add(a, b, result)
+	local l, r 
+	if a.type == 'Node' then a = a.result end
+	if b.type == 'Node' then b = b.result end
+
+	if a.type == "Number" then l = a.value end
+	if b.type == "Number" then r = b.value end
+
+	result.result = Number.new()
+	result.result.value = l + r
+	print(a.type, b.type, result.result.value)
 end
 
-local function operator_sub()
+local function operator_sub(a, b, result)
+	local l, r 
+	if a.type == 'Node' then a = a.result end
+	if b.type == 'Node' then b = b.result end
+
+	if a.type == "Number" then l = a.value end
+	if b.type == "Number" then r = b.value end
+
+	result.result = Number.new()
+	result.result.value = l - r
+	print(a.type, b.type, result.result.value)
 end
 
-local function operator_mul()
+local function operator_mul(a, b, result)
+	local l, r 
+	if a.type == 'Node' then a = a.result end
+	if b.type == 'Node' then b = b.result end
+
+	if a.type == "Number" then l = a.value end
+	if b.type == "Number" then r = b.value end
+
+	result.result = Number.new()
+	result.result.value = l * r
+	print(a.type, b.type, result.result.value)
 end
 
 local function operator_div()
@@ -48,37 +80,6 @@ local function operator_and()
 
 end
 
-local tkend = 'tkend'
-local tkident = 'tkident'
-local tknumber = 'tknumber'
-local tkfloat = 'tkfloat'
-local tkstring = 'tkstring'
-local tkoperator = 'tkoperator'
-local tkleftbracket = 'tkleftbracket' --(
-local tkrightbracket = 'tkrightbracket'--)
-local tkleftsquarebracket = 'tkleftsquarebracket' --[
-local tkrightsquarebracket = 'tkrightsquarebracket' --]
-local tkleftbrace = 'tkleftbrace'--{
-local tkrightbrace = 'tkrightbrace'--}
-local tkdot = 'tkdot'
-local tkand = 'tkand'
-local tkor = 'tkor'
-local tknot = 'tknot'
-local tkmod = 'tkmod'
-local tkdiv = 'tkdiv'
-local tkmul = 'tkmul'
-local tkadd = 'tkadd'
-local tksub = 'tksub'
-local tkeq = 'tkeq'
-local tkless = 'tkless'
-local tklesseq = 'tklesseq'
-local tkbig = 'tkbig'
-local tkbigeq = 'tkbigeq'
-local tkuneq = 'tkuneq'
-local tkassign = 'tkassign'
-local tkcomma ='tkcomma'
-local tkclass = 'tkclass'
-local tkfunction = 'tkfunction'
 OperatorTable[1] = {
   [tkadd] = operator_add, 
   [tksub] = operator_sub
@@ -115,11 +116,15 @@ function OperatorTable.isinthislevel(op, level)
 	-- print(op, level)
 	if OperatorTable[level] then
 		if OperatorTable[level][op] then
-			return true
+			return true, OperatorTable[level][op]
 		else
 			return false
 		end
 	end
 	return false
+end
+
+function OperatorTable.getop( ... )
+	-- body
 end
 return OperatorTable
