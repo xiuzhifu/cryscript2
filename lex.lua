@@ -161,9 +161,9 @@ m[tkstring] = lex_string
 
 local function lex_ident()
 	local w = string.sub(m.source, m.current, m.current)
-	if isblankspace(w) or m.isaoperator(w)then
+	if isblankspace(w) then
 		return ''
-	elseif (isalnum(w) or w == '_') and m.next() then
+	elseif m.next() then
 		return w .. lex_ident()
 	else
 		m.error('ident: '..m.tokenstring..w)
@@ -188,6 +188,7 @@ local simpletokentable = {
 	[':'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
 		if w == '=' then m.current = m.current + 1 return tknew, ':=' else return tkcolon, ':' end
+	end,
 	['<'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
 		if w == '=' then 
@@ -213,8 +214,9 @@ function m.isaoperator(w)
 end
 
 function m.getnexttoken(b)
+	local rl = m.line
 	m.skipblankspace()
-	if m.isend() then return tkend end
+	if m.isend() then return tkend, rl + 1, rl end
 	local state
 	local w = string.sub(m.source, m.current, m.current)
 	local c, l = m.current, m.line
@@ -222,7 +224,7 @@ function m.getnexttoken(b)
 		state = tkstring
 	elseif isdigit(w) then
 		state = tknumber
-	elseif isalpha(w) or w == '_' then
+	else
 		state = tkident
 	end
 	-- print(state, m[tknumber])
@@ -235,9 +237,6 @@ function m.getnexttoken(b)
 				state = m[m.tokenstring] 
 			end
 		end
-	elseif simpletokentable[w] then
-		state, m.tokenstring = simpletokentable[w]()
-		m.current = m.current + 1
 	else
 		m.error("getnexttoken() don't match that token")
 	end
@@ -246,7 +245,7 @@ function m.getnexttoken(b)
 		m.current = c
 		m.line, l = l, m.line
 	end
-	return state, l
+	return state, l, rl 
 end
 
 function m.match(token)

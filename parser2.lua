@@ -2,6 +2,7 @@
 block -> statement
 statement -> assign-stmt| callfun-stmt |new-stmt
 new-stmt-> object-stmt := exp 因为函数调用允许没有括号，所以，要分清是调用还是取地址，要多加一个操作符
+assign-stmt -> object-stmt{, object-stmt}  = exp {, exp}
 exp-> term1 logicop term1|term1
 term1-> term asop term|term
 term -> factor mdop factor|factor
@@ -43,36 +44,88 @@ end
 
 --statement -> callfun-stmt | return-stmt
 function m.statement(n)
-	while true do
-    local token = lex.getnexttoken()
-    if token == tkend then break end
-		if token == tkclass or token == tkident or token == tkstring or token == tknumber then
-			local r = m.object_statement(true)
-		else
-			m.error('statement() unknown token: '..token)
-      break
+	print(n)
+	local token = lex.getnexttoken()
+	print(token)
+	if token == tkclass or token == tkident then
+		local r = m.callfunction_statement(token)
+		token = lex.getnexttoken()
+		if token == tkassign then
+			m.assign_statement(r)
+		elseif token == tknew then
+			m.new_statement()
 		end
+	elseif token == tknumber then
+		m.exp_statement()
+	else
+		m.error('statement() unknown token: '..token)
 	end
 end
---object-stmt ->Object functionname [functionname]|Object.functionname[.functionname]|functionname(Object)| Object
-function m.object_statement()
-  local r, classname, object, left, operator, right, tk1, tk2, tk3
-	local tk1, c, l = lex.getnexttoken()
-	lex.match(tk1)
-	left = lex.gettokenstring()--object
-	tk2, c, l = lex.getnexttoken()--operator
-  if l ~= c then return tk1, left end--one 
-	lex.match(tk2)
-	local operator = lex.gettokenstring()
-  tk3, c, l = lex.getnexttoken()
-	if l ~= c then -- two
-    return emitter.emit_operator(operator, {tk1, left})
-  end
 
-  if tk3 == tkclass or tk3 == tkident or tk3 == tkstring or tk3 == tknumber then
-    right = m.object_statement()
-    return emitter.emit_operator(operator, {tk1, left}, {tk3, right})
+function m.new_statement()
+end
+
+-- assign-stmt -> object-stmt{, object-stmt}  = sexp {, sexp}
+--sexp|identifiers|callfunc-stmt|object-stmt
+function m.assign_statement(left)
+	lex.match(tkassign)
+	local token, l = lex.getnexttoken()
+	if token == tkclass or token == tkident then
+		emitter.emit_assign(left, m.callfunction_statement(token))
 	end
+	--m.exp_statement()
+end
+
+--callfunc-stmt -> object-stmt({callfunction_statement})|
+--object-stmt {callfunction_statement} | object-stmt({callfunction_statement}) {block}
+function m.callfunction_statement(token)
+	return m.object_statement(token)
+	-- local tk, l = m.object_statement(token)
+	-- local token = lex.getnexttoken()
+	-- if token == tkleftbracket then
+	-- 	lex.match(tkleftbracket)
+	-- 	local r = m.exp_statement()
+	-- 	lex.match(tkrightbracket)
+	-- 	emitter.emit_callfunction(s, r)
+	-- end
+	-- if token == tkleftbrace then
+	-- 	lex.match(tkleftbrace)
+	-- 	m.block_statement()
+	-- 	lex.match(tkrightbrace)
+	-- end
+end
+
+--object-stmt ->Object functionname [functionname]|Object.functionname[.functionname]|functionname(Object)| Object
+function m.object_statement(token)
+	lex.match(token)
+	local classname = lex.gettokenstring()
+	local l = lex.line
+	local token, c = lex.getnexttoken()
+	local classfunction = {}
+	--like O = Object or O = Object new or O = Object.new or O = new(Object)lex.match(tkassign)
+	if token == tkdot then  --O = Object.new
+		while token == tkdot do
+			lex.match(tkdot)
+			lex.match(tkident)
+			table.instert(classfunction, lex.gettokenstring())
+			token = lex.getnexttoken()
+		end
+		return emitter.emit_object(classname, classfunction)
+	elseif token == tkident then  --O = Object new
+		while l == c and token == tkident do
+			lex.match(tkident)
+			table.insert(classfunction, lex.gettokenstring())
+			l = lex.line
+			token, c = lex.getnexttoken()
+		end
+		return emitter.emit_object(classname, classfunction)
+	else--O = Object
+		return emitter.emit_object(classname)
+	end
+end
+
+function m.block_statement()
+	
 end
 
 function m.number()
@@ -153,8 +206,7 @@ function m.gen_operator_parser()
 	terms[otlen + 1] = m.factor_statement
 end
 m.gen_operator_parser()
-m.parser("'123' print \nO = Object new ")
---m.parser("'123' print \nO = Object new ")
+m.parser("O = Object new ")
 local vm =  require 'vm'
 vm.execute()
 
