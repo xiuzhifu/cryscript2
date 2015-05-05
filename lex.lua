@@ -79,40 +79,8 @@ tkclass = 'tkclass'
 tkfunction = 'tkfunction'
 tkobject = 'tkobject'
 tknode = "tknode"
-
--- local tkend = 'tkend'
--- local tkident = 'tkident'
--- local tknumber = 'tknumber'
--- local tkfloat = 'tkfloat'
--- local tkstring = 'tkstring'
--- local tkoperator = 'tkoperator'
--- local tkleftbracket = 'tkleftbracket' --(
--- local tkrightbracket = 'tkrightbracket'--)
--- local tkleftsquarebracket = 'tkleftsquarebracket' --[
--- local tkrightsquarebracket = 'tkrightsquarebracket' --]
--- local tkleftbrace = 'tkleftbrace'--{
--- local tkrightbrace = 'tkrightbrace'--}
--- local tkdot = 'tkdot'
--- local tkand = 'tkand'
--- local tkor = 'tkor'
--- local tknot = 'tknot'
--- local tkmod = 'tkmod'
--- local tkdiv = 'tkdiv'
--- local tkmul = 'tkmul'
--- local tkadd = 'tkadd'
--- local tksub = 'tksub'
--- local tkeq = 'tkeq'
--- local tkless = 'tkless'
--- local tklesseq = 'tklesseq'
--- local tkbig = 'tkbig'
--- local tkbigeq = 'tkbigeq'
--- local tkuneq = 'tkuneq'
--- local tkassign = 'tkassign'
--- local tkcomma ='tkcomma'
--- local tkclass = 'tkclass'
--- local tkfunction = 'tkfunction'
--- local tkobject = 'tkobject'
-
+tkcolon = 'tkcolon'
+tknew = 'tknew'
 
 m[tkand] = 'and'
 m[tkor] = 'or'
@@ -217,6 +185,9 @@ local simpletokentable = {
 	['+'] = function() return tkadd, '+' end,
 	['-'] = function() return tksub, '-' end,
 	[','] = function() return tkcomma, ',' end,
+	[':'] = function() 
+		local w = string.sub(m.source, m.current + 1, m.current + 1)
+		if w == '=' then m.current = m.current + 1 return tknew, ':=' else return tkcolon, ':' end
 	['<'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
 		if w == '=' then 
@@ -259,7 +230,7 @@ function m.getnexttoken(b)
 		m.tokenstring = m[state]()
 		if state == tkident then
 			if isupper(string.sub(m.tokenstring, 1, 1)) then
-				return tkclass
+				state = tkclass
 			elseif m[m.tokenstring] then 
 				state = m[m.tokenstring] 
 			end

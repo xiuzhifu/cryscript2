@@ -11,4 +11,28 @@ end
 function Number:to_s()
 	return tostring(self.value)
 end
+Number['+'] = function(left, right, result)
+	assert(left:isparent("Number"))
+	assert(right:isparent("Number"))
+	left.value = right.value + left.value
+end
+
+Number['-'] = function(left, right, result)
+	assert(left:isparent("Number"))
+	assert(right:isparent("Number"))
+	left.value = right.value - left.value
+end
+
+Number['*'] = function(left, right, result)
+	assert(left:isparent("Number"))
+	assert(right:isparent("Number"))
+	left.value = right.value * left.value
+end
+
+Number['/'] = function(left, right, result)
+	assert(left:isparent("Number"))
+	assert(right:isparent("Number"))
+	left.value = right.value / left.value
+end
+
 return Number

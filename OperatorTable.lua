@@ -124,7 +124,4 @@ function OperatorTable.isinthislevel(op, level)
 	return false
 end
 
-function OperatorTable.getop( ... )
-	-- body
-end
 return OperatorTable

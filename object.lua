@@ -14,4 +14,16 @@ function Object:print(...)
 	end
 end
 
+function Object:isparent(class)
+	local t = self
+	while true do
+		if t.type == class then return true end
+		if t.__index then
+			t = t.__index
+		else
+			return false
+		end
+	end
+end
+
 return Object

@@ -5,12 +5,69 @@ local Number = require "number"
 local objectpool = {}
 local m = {}
 
-function m.emit_object(name)
+function m.emit_object(name, funclist, varlist)
 	local o = Object.new()
 	objectpool[name] = o
 	o.type = name
-	return o
-	--local n = ast.newnode()
+	local n = ast.newnode()
+	n.left = o-- save obj or string? todo
+	n.right = funclist
+	n.middle = varlist
+	n.operator = function(node)
+		local f = node.right
+		local o = node.o
+		if f then
+			return o, ''
+		else
+			for i=1,#f do
+				if o[f[i]] and type(o[f[i]]) == 'function' then
+					o = o[f[i]]()
+				else
+					o = o[f[i]]
+				end	
+			end
+			return o, f[#f]
+		end
+	end
+	return n
+end
+
+function m.emit_assign(left, right)
+	local n = ast.newnode()
+	ast.addnode(n)
+	ast.setcurrentnode(n)
+	n.left = left
+	n.right = right
+	o.operator = function(left, right, node)
+		local lr, rr
+		if left.type == 'Node' then left, lr = left.operator(node) end
+		if right.type == 'Node' then right, rr = right.operator(node) end
+		if type(right[rr]) == "function" then
+			left[lr] = right[rr]()
+		else
+			left[lr] = right[rr]
+	end
+	return tknode, n
+end
+
+function m.emit_new(left, right)
+	local n = ast.newnode()
+	ast.addnode(n)
+	ast.setcurrentnode(n)
+	n.left = left
+	n.right = right
+	o.operator = function(left, right, node)
+		local lr, rr
+		if left.type == 'Node' then left, lr = left.operator(node) end
+		if right.type == 'Node' then right, rr = right.operator(node) end
+		if type(right[rr]) == "function" then
+			left[lr] = function(...)
+				return right[rr](...)
+			end
+		else
+		left[lr] = right[rr]
+	end
+	return tknode, n
 end
 
 function m.emit_callfunction(tk, s, funcname)
@@ -37,10 +94,6 @@ function m.emit_callfunction(tk, s, funcname)
 		if f[node.right] then f[node.right](f) else print("Not found function: "..node.right) end
 	end
 	return "tknode", n
-end
-
-function m.emit_assign( ... )
-	-- body
 end
 
 function m.emit_exp(tkfunc, tk1, s1, tk2, s2)

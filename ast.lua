@@ -1,6 +1,6 @@
 local ast = {}
 local node = {}
-
+node.__index = node
 function ast.newnode()
   local t = setmetatable({}, node)
   t.type = 'Node'
