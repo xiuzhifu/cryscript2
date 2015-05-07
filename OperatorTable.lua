@@ -1,5 +1,6 @@
 require "lex"
-local OperatorTable = Object.new()
+local ObjectObject = require "objectObject"
+local OperatorTable = ObjectObject.new()
 
 local OperatorTable = {}
 

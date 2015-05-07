@@ -1,0 +1,7 @@
+--"anmeng" print
+O = ObjectObject new 
+O name = "anmeng"
+O fackname = O name
+O fackname print 
+-- Who are you me  
+

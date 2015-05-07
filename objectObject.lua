@@ -15,7 +15,7 @@ end
 
 function Object:print(...)
 	if self and self['to_s'] then
-		print('objectprint: ',self['to_s'](self))
+		print('cryprint: ',self['to_s'](self))
 	else
 		print(...)
 	end

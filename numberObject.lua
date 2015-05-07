@@ -1,6 +1,9 @@
-local Object = require "object"
-local Number = Object.new()
+local ObjectObject = require "objectObject"
+local Number = ObjectObject.new()
+
+Number.type = 'Number'
 Number.__index = Number
+
 function Number.new()
 	local t = setmetatable({}, Number)
 	t.type = 'Number'

@@ -1,44 +1,5 @@
+local precomplier = require 'precomplier'
 local m ={}
-
-local function islower(w)
-	local words = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'}
-	for _, v in pairs(words) do
-		if w == v then return true end 
-	end
-	return false
-end
-
-local function isupper(w)
-	local words = {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','I','V','W','X','Y','Z'}
-	for _, v in pairs(words) do
-		if w == v then return true end 
-	end
-	return false
-end
-
-local function isalpha(w)
-	return islower(w) or isupper(w)
-end
-
-local function isdigit(w)
-	local words = {'0','1','2','3','4','5','6','7','8','9'}
-	for _, v in pairs(words) do
-		if w == v then return true end
-	end
-	return false
-end
-
-local function isalnum(w)
-	return isalpha(w) or isdigit(w)
-end
-
-local function isseparator(w)
-	if w == '\'' or w == '\n' then return true else return false end 
-end
-
-local function isblankspace(w)
-	if w == ' ' then return true else return false end
-end
 
 m.line = 1
 m.source = ''
@@ -87,6 +48,42 @@ m[tkor] = 'or'
 m[tknot] = 'not'
 m[tkfunction] = 'function'
 
+local function islower(w)
+	local words = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'}
+	for _, v in pairs(words) do
+		if w == v then return true end 
+	end
+	return false
+end
+
+local function isupper(w)
+	local words = {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','I','V','W','X','Y','Z'}
+	for _, v in pairs(words) do
+		if w == v then return true end 
+	end
+	return false
+end
+
+local function isalpha(w)
+	return islower(w) or isupper(w)
+end
+
+local function isdigit(w)
+	local words = {'0','1','2','3','4','5','6','7','8','9'}
+	for _, v in pairs(words) do
+		if w == v then return true end
+	end
+	return false
+end
+
+local function isalnum(w)
+	return isalpha(w) or isdigit(w)
+end
+
+local function isblankspace(w)
+	if w == ' ' or w == '\n' then return true else return false end
+end
+
 function m.gettokenstring()
 	return m.tokenstring
 end
@@ -100,7 +97,8 @@ function m.incline()
 end
 
 function m.load(source)
-	m.source = source..' ' -- add a space for easily using isend function
+	source = precomplier.load(source)
+	m.source = source..'   ' -- add a space for easily using isend function
 	m.length = string.len(source)
 end
 
@@ -179,12 +177,15 @@ local simpletokentable = {
 	['{'] = function() return tkleftbrace, '{' end,
 	['}'] = function() return tkrightbrace, '}' end,
 	['.'] = function() return tkdot, '.' end,
+	[','] = function() return tkcomma, ',' end,
 	['%'] = function() return tkmod, '%' end,
 	['*'] = function() return tkmul, '*' end,
 	['/'] = function() return tkdiv, '/' end,
 	['+'] = function() return tkadd, '+' end,
-	['-'] = function() return tksub, '-' end,
-	[','] = function() return tkcomma, ',' end,
+	['-'] = function()  
+		local w = string.sub(m.source, m.current + 1, m.current + 1)
+		if w == '-' then m.current = m.current + 1 return tknote, '--' else return tksub, '-' end	
+	end,
 	[':'] = function() 
 		local w = string.sub(m.source, m.current + 1, m.current + 1)
 		if w == '=' then m.current = m.current + 1 return tknew, ':=' else return tkcolon, ':' end
@@ -224,10 +225,9 @@ function m.getnexttoken(b)
 		state = tkstring
 	elseif isdigit(w) then
 		state = tknumber
-	else
+	elseif isalnum(w) or w == '_' then
 		state = tkident
 	end
-	-- print(state, m[tknumber])
 	if state then
 		m.tokenstring = m[state]()
 		if state == tkident then
@@ -237,6 +237,10 @@ function m.getnexttoken(b)
 				state = m[m.tokenstring] 
 			end
 		end
+	elseif m.isaoperator(w) then
+		state, m.tokenstring = simpletokentable[w]()
+		m.current = m.current + 1
+		if state ~= tknew and state ~= tkassign then state = tkident end 
 	else
 		m.error("getnexttoken() don't match that token")
 	end

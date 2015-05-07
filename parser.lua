@@ -39,6 +39,15 @@ function m.parser(source)
 		n = m.statement(n)
 	end
 	print("parser ended")
+	emitter.insts = emitter.insts .. [[
+end
+main()
+]]
+	print(emitter.insts)
+	local f = io.open('main.lua', 'w')
+	f:write(emitter.insts)
+	io.close(f)
+	loadfile('main.lua')()
 end
 
 --statement -> callfun-stmt | return-stmt
@@ -47,7 +56,7 @@ function m.statement(n)
     local token = lex.getnexttoken()
     if token == tkend then break end
 		if token == tkclass or token == tkident or token == tkstring or token == tknumber then
-			local r = m.object_statement(true)
+			local r = m.object_statement(1)
 		else
 			m.error('statement() unknown token: '..token)
       break
@@ -55,24 +64,46 @@ function m.statement(n)
 	end
 end
 --object-stmt ->Object functionname [functionname]|Object.functionname[.functionname]|functionname(Object)| Object
-function m.object_statement()
-  local r, classname, object, left, operator, right, tk1, tk2, tk3
-	local tk1, c, l = lex.getnexttoken()
+function m.object_statement(layer, object, token)
+	local left, right, operator, tk1, tk2, tk3, c, l 
+	tk1, c, l = lex.getnexttoken()
+	if c ~= l then return object end
 	lex.match(tk1)
 	left = lex.gettokenstring()--object
-	tk2, c, l = lex.getnexttoken()--operator
-  if l ~= c then return tk1, left end--one 
-	lex.match(tk2)
-	local operator = lex.gettokenstring()
-  tk3, c, l = lex.getnexttoken()
-	if l ~= c then -- two
-    return emitter.emit_operator(operator, {tk1, left})
-  end
-
-  if tk3 == tkclass or tk3 == tkident or tk3 == tkstring or tk3 == tknumber then
-    right = m.object_statement()
-    return emitter.emit_operator(operator, {tk1, left}, {tk3, right})
+	if tk1 == tkassign then
+		right = m.object_statement(layer + 1)
+		emitter.emit_assign(layer, object, right, token)
+		return
 	end
+	if not object then
+			tk2, c, l = lex.getnexttoken()--operator
+			if tk2 == tkassign then 	
+				return m.object_statement(layer + 1, left, tk1)
+			end
+			if c == l then 
+				lex.match(tk2)
+				operator = lex.gettokenstring()					
+			end
+	else
+		tk1 = tkclass
+		operator = left
+		left = object
+	end
+	object = emitter.emit(operator, layer, {tk1, left})
+	if c ~= l then return object end
+	tk3, c, l = lex.getnexttoken()
+	if l == c then
+		if tk3 == tkident then 
+			m.object_statement(layer + 1, object, tk3)
+		elseif tk3 == tkstring or tk3 == tknumber then
+			left = lex.gettokenstring()
+			object = emitter.emit(operator, layer, {tk3, left})
+			m.object_statement(layer + 1, object, tk3)
+		else
+			m.object_statement(layer + 1, object, tk3)
+		end
+	end
+	return object
 end
 
 function m.number()
@@ -153,8 +184,8 @@ function m.gen_operator_parser()
 	terms[otlen + 1] = m.factor_statement
 end
 m.gen_operator_parser()
-m.parser("'123' print \nO = Object new ")
---m.parser("'123' print \nO = Object new ")
-local vm =  require 'vm'
-vm.execute()
+local f = io.open('test.cry', 'r')
+local s =  f:read('a')
+io.close(f)
+m.parser(s)
 
