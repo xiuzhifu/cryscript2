@@ -1,11 +1,11 @@
 local ObjectObject = require "objectObject"
 local NumberObject = require "numberObject"
-local stringObject = require "stringObject"
+local StringObject = require "stringObject"
 local objectpool = {}
 local classpool = {}
 classpool[ObjectObject.type] = ObjectObject
 classpool[NumberObject.type] = NumberObject
-classpool[stringObject.type] = stringObject
+classpool[StringObject.type] = StringObject
 
 local function getobject(object, parent)
 	local o = objectpool[object]
@@ -38,28 +38,44 @@ local function getstring(n)
 	return o
 end
 
+local index = 0
+local temp = {}
+local function callvariable(addr, v)
+	local t = temp[addr]
+	t.object[v]()
+	end
+end
+
+
+local function setvariable(addr, v)
+	local t = temp[addr]
+	if t.key then 
+		t.object[t.key] = v
+	else
+		t.object = v
+	end
+end
+
+local function getvariableaddr(o, k)
+	index = index + 1
+	if k then 
+		temp[index] = {object = o, key = k}
+	else
+		temp[index] = {object = o, key = nil}	
+	end
+	return index
+end
+
 function main()
-	var3 = function(s) 
- 		if s then ObjectObject.new = s end
- 		return ObjectObject.new end
-	O = var3
-	var1 = function(s) 
- 		if s then O.name = s end
- 		return O.name end
-	var3 = function() return getstring('anmeng') end
-	var1 (var3())
-	var1 = function(s) 
- 		if s then O.fackname = s end
- 		return O.fackname end
-	var3 = function(s) 
- 		if s then O.name = s end
- 		return O.name end
-	var1 (var3())
-	var1 = function(s) 
- 		if s then O.fackname = s end
- 		return O.fackname end
-	var2 = function(s) 
- 		if s then var1.print = s end
- 		return var1.print end
+	temp3 = ObjectObject.new()
+	O = temp3
+	temp1 = getvariableaddr(O, "name")
+	temp3 = getstring('anmeng')
+	setvariable(temp1 , temp3)
+	temp1 = getvariableaddr(O, "fackname")
+	temp3 = getvariableaddr(O, "name")
+	setvariable(temp1 , temp3)
+	temp1 = getvariableaddr(O, "fackname")
+	temp2 = getvariableaddr(temp1, "print")
 end
 main()

@@ -255,12 +255,6 @@ end
 function m.match(token)
 	if not token == m.getnexttoken(true) then m.error("match :"..token) end
 end
--- m.load("1 + 2 * 3 - 4 ")
--- while true do
--- 	local tk = m.getnexttoken()
--- 	print(m.gettokenstring(), tk)
--- 	m.match(tk)
--- 	if tk ==  tkend then break end
--- 	end
+
 return m 
 

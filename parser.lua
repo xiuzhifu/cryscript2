@@ -44,10 +44,10 @@ end
 main()
 ]]
 	print(emitter.insts)
-	local f = io.open('main.lua', 'w')
-	f:write(emitter.insts)
-	io.close(f)
-	loadfile('main.lua')()
+	--local f = io.open('main.lua', 'w')
+	--f:write(emitter.insts)
+	--io.close(f)
+	--loadfile('main.lua')()
 end
 
 --statement -> callfun-stmt | return-stmt
@@ -71,6 +71,7 @@ function m.object_statement(layer, object, token)
 	lex.match(tk1)
 	left = lex.gettokenstring()--object
 	if tk1 == tkassign then
+		
 		right = m.object_statement(layer + 1)
 		emitter.emit_assign(layer, object, right, token)
 		return
