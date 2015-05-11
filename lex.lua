@@ -36,17 +36,20 @@ tkbigeq = 'tkbigeq'
 tkuneq = 'tkuneq'
 tkassign = 'tkassign'
 tkcomma ='tkcomma'
-tkclass = 'tkclass'
 tkfunction = 'tkfunction'
 tkobject = 'tkobject'
 tknode = "tknode"
 tkcolon = 'tkcolon'
 tknew = 'tknew'
+tkfinal = 'tkfinal'
 
-m[tkand] = 'and'
-m[tkor] = 'or'
-m[tknot] = 'not'
-m[tkfunction] = 'function'
+m['and'] = tkand
+m['or'] = tkor
+m['not'] = tknot
+m['function'] = tkfunction
+m['object'] = tkobject
+m['end'] = tkend
+m['def'] = tkfunction
 
 local function islower(w)
 	local words = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'}
@@ -217,7 +220,7 @@ end
 function m.getnexttoken(b)
 	local rl = m.line
 	m.skipblankspace()
-	if m.isend() then return tkend, rl + 1, rl end
+	if m.isend() then return tkfinal, rl + 1, rl end
 	local state
 	local w = string.sub(m.source, m.current, m.current)
 	local c, l = m.current, m.line
@@ -232,7 +235,7 @@ function m.getnexttoken(b)
 		m.tokenstring = m[state]()
 		if state == tkident then
 			if isupper(string.sub(m.tokenstring, 1, 1)) then
-				state = tkclass
+		--		state = tkobject
 			elseif m[m.tokenstring] then 
 				state = m[m.tokenstring] 
 			end
@@ -240,7 +243,7 @@ function m.getnexttoken(b)
 	elseif m.isaoperator(w) then
 		state, m.tokenstring = simpletokentable[w]()
 		m.current = m.current + 1
-		if state ~= tknew and state ~= tkassign then state = tkident end 
+		--if state ~= tknew and state ~= tkassign then state = tkident end 
 	else
 		m.error("getnexttoken() don't match that token")
 	end

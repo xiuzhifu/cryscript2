@@ -1,7 +1,21 @@
---"anmeng" print
-O = ObjectObject new 
-O name = "anmeng"
-O fackname = O name
-O fackname print 
--- Who are you me  
+object test < Object
+	object My < Object
+		name = ''
+		age = 18
+		def is
+			assign
+		end
+		def create
+		end
+		def copy
+		end
+		def is 
+		end
+    def init
+    end
+	end
+	anmeng = "anmeng"
+	My first name is anmeng
+	My age is 18
+end
 

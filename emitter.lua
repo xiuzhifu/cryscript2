@@ -7,203 +7,49 @@ instdiv = 'instmul'
 
 instclass = 'instclass'
 instobject = 'instobject'
-m.insts = [[
-local ObjectObject = require "objectObject"
-local NumberObject = require "numberObject"
-local StringObject = require "stringObject"
+
 local objectpool = {}
-local classpool = {}
-classpool[ObjectObject.type] = ObjectObject
-classpool[NumberObject.type] = NumberObject
-classpool[StringObject.type] = StringObject
-
-local function getobject(object, parent)
-	local o = objectpool[object]
-	if not o then
-		assert(classpool[parent], parent)
-		o = classpool[parent].new()
-	end
-	return o
-end
-
-local function getclass(class)
-	local c = classpool[class]
-	if not c then
-		c = ObjectObject.new()
-		classpool[class] = c
-		c.type = class
-	end
-	return c
-end
-
-local function getnumber(n)
-	local o = getobject(n, 'Number')
-	o.value = n
-	return o
-end
-
-local function getstring(n)
-	local o = getobject(n, 'String')
-	o.s = n
-	return o
-end
-
-local index = 0
-local temp = {}
-local function callvariable(addr, v)
-	local t = temp[addr]
-	t.object[v]()
-	end
-end
-
-
-local function setvariable(addr, v)
-	local t = temp[addr]
-	if t.key then 
-		t.object[t.key] = v
-	else
-		t.object = v
-	end
-end
-
-local function getvariableaddr(o, k)
-	index = index + 1
-	if k then 
-		temp[index] = {object = o, key = k}
-	else
-		temp[index] = {object = o, key = nil}	
-	end
-	return index
-end
-
-function main()
-]]
-
-local ObjectObject = require "objectObject"
-local NumberObject = require "numberObject"
-local StringObject = require "stringObject"
-local objectpool = {}
-local classpool = {}
-classpool[ObjectObject.type] = ObjectObject
-classpool[NumberObject.type] = NumberObject
-classpool[StringObject.type] = StringObject
-
-local function getobject(object, parent)
-	local o = objectpool[object]
-	if not o then
-		assert(classpool[parent], parent)
-		o = classpool[parent].new()
-	end
-	return o
-end
-
-local function getclass(class)
-	local c = classpool[class]
-	if not c then
-		c = ObjectObject.new()
-		classpool[class] = c
-		c.type = class
-	end
-	return c
-end
-
-local function getnumber(n)
-	local o = getobject(n, 'Number')
-	o.value = n
-	return o
-end
-
-local function getstring(n)
-	local o = getobject(n, 'String')
-	o.s = n
-	return o
-end
-
-local index = 0
-local temp = {}
-local function callvariable(addr, v)
-	local t = temp[addr]
-	t.object[v]()
-end
-
-
-local function setvariable(addr, v)
-	local t = temp[addr]
-	if t.key then 
-		t.object[t.key] = v
-	else
-		t.object = v
-	end
-end
-
-local function getvariableaddr(o, k)
-	index = index + 1
-	if k then 
-		temp[index] = {object = o, key = k}
-	else
-		temp[index] = {object = o, key = nil}	
-	end
-	return index
-end
-
-local runtime = {}
-local objectlist = {}
-local varlist = {}
-local localvarlist = {}
-local functionlist = {}
-local function init()
-	local ObjectObject = require "objectObject"
-	local NumberObject = require "numberObject"
-	local StringObject = require "stringObject"
-	objectlist['ObjectObject'] = ObjectObject
-	objectlist['NumberObject'] = NumberObject
-	objectlist['StringObject'] = StringObject
-	
-	
-	objectlist[ObjectObject.type] = ObjectObject
-	objectlist[NumberObject.type] = NumberObject
-	objectlist[StringObject.type] = StringObject
-
-	varlist['ObjectObject'] = {}
-	varlist['NumberObject'] = {}
-	varlist['StringObject'] = {}	
-
-	functionlist['ObjectObject'] = {}
-	functionlist['NumberObject'] = {}
-	functionlist['StringObject'] = {}	
-	for k,v in pairs(ObjectObject) do
-		if type(v) == 'function' then
-			functionlist['ObjectObject'][k] = true
-		else
-			varlist['ObjectObject'][k] = true
-		end
-	end
-
-	for k,v in pairs(NumberObject) do
-		if type(v) == 'function' then
-			functionlist['NumberObject'][k] = true
-		else
-			varlist['NumberObject'][k] = true
-		end
-	end
-
-	for k,v in pairs(StringObject) do
-		if type(v) == 'function' then
-			functionlist['StringObject'][k] = true
-		else
-			varlist['StringObject'][k] = true
-		end
-	end
-end
-init()
+local symboltable = {}
 
 local function findprop(o, k)
 	if o.k then return true else return false end
 end
 
-function m.emit_object(object, parent)
-	m.insts = m.insts.. string.format("getobject(%s, %s)", object, parent)
+function m.emit_object(object, parent, owner)
+  symboltable.objects[object] = {
+    ['parent'] = parent,
+    ['owner'] = owner,
+    ['end'] = false,
+		['function'] = {},
+		['start'] = {}
+  }  
+  
 end
+
+function m.emit_object_end(objectname)
+  symboltable.objects[objectname]['end'] = true
+end
+
+function m.emit_function_start(object, funcname)
+end
+
+function m.emit_function_param(object, funcname, param)
+end
+
+function m.is_function(object, funcname)
+		local o = symboltable.objects[object]
+		if o['function'][funcname] then return true else return false end
+end
+
+function m.is_variable(object, name)
+  local o = symboltable.objects[object]
+  if o['variable'][name] then return true else return false end
+end
+
+function m.emit_object_variable(object, left, right)
+end
+
+function m.emit_command(object, funcname, inst, left, layer)
 
 function m.emit_class(class)
 	return string.format("getclass('%s')", class)

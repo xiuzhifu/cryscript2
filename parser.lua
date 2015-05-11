@@ -25,86 +25,128 @@ local OperatorTable = require "OperatorTable"
 local lex = require "lex"
 local emitter = require "emitter"
 local m = {}
-
+local symboltable = {}
+m.chunk = {}
 function m.error(e)
 	print('line: '..tostring(lex.line)..' error: '..e)
 end
 
-function m.parser(source)
-	lex.load(source)
-	local n
-	while true do
-		local token = lex.getnexttoken()
-		if token == tkend then break end
-		n = m.statement(n)
-	end
-	print("parser ended")
-	emitter.insts = emitter.insts .. [[
-end
-main()
-]]
-	print(emitter.insts)
-	--local f = io.open('main.lua', 'w')
-	--f:write(emitter.insts)
-	--io.close(f)
-	--loadfile('main.lua')()
+function m.load(filename)
+  local f = io.open(filename, 'r')
+  local s =  f:read('a')
+  io.close(f)
+  s == 'object '..filename..' < Object\n'..s .. 'end'
+  local c = {
+          ['source'] = s,
+          ['name'] = filename,
+  }
+  local l = #m.chunk
+  m.chunk[l] = c
+  m.parser(l)
 end
 
+function m.parser(index)
+  m.currentchunk = m.chunk[index]
+	lex.load(m.currentchunk['source'])
+	while true do
+		m.statement()
+	end
+	print("parser ended")
+end
 --statement -> callfun-stmt | return-stmt
-function m.statement(n)
+function m.statement(owner)
 	while true do
     local token = lex.getnexttoken()
-    if token == tkend then break end
-		if token == tkclass or token == tkident or token == tkstring or token == tknumber then
-			local r = m.object_statement(1)
+    if token == tkfinal then break end
+		if token == tkobject then
+			local r = m.object_statement(owner)
+    elseif token == tkident then
+    end
 		else
 			m.error('statement() unknown token: '..token)
       break
 		end
 	end
 end
---object-stmt ->Object functionname [functionname]|Object.functionname[.functionname]|functionname(Object)| Object
-function m.object_statement(layer, object, token)
-	local left, right, operator, tk1, tk2, tk3, c, l 
-	tk1, c, l = lex.getnexttoken()
-	if c ~= l then return object end
-	lex.match(tk1)
-	left = lex.gettokenstring()--object
-	if tk1 == tkassign then
-		
-		right = m.object_statement(layer + 1)
-		emitter.emit_assign(layer, object, right, token)
-		return
-	end
-	if not object then
-			tk2, c, l = lex.getnexttoken()--operator
-			if tk2 == tkassign then 	
-				return m.object_statement(layer + 1, left, tk1)
-			end
-			if c == l then 
-				lex.match(tk2)
-				operator = lex.gettokenstring()					
-			end
-	else
-		tk1 = tkclass
-		operator = left
-		left = object
-	end
-	object = emitter.emit(operator, layer, {tk1, left})
-	if c ~= l then return object end
-	tk3, c, l = lex.getnexttoken()
-	if l == c then
-		if tk3 == tkident then 
-			m.object_statement(layer + 1, object, tk3)
-		elseif tk3 == tkstring or tk3 == tknumber then
-			left = lex.gettokenstring()
-			object = emitter.emit(operator, layer, {tk3, left})
-			m.object_statement(layer + 1, object, tk3)
-		else
-			m.object_statement(layer + 1, object, tk3)
-		end
-	end
-	return object
+
+function m.statement_statement()
+end
+
+function m.function_statement(layer, objectname)
+  lex.match(tkfunction)
+  local functionname
+  lex.match(tkident)
+  functionname = lex.gettokenstring()
+  m.emit_function(objectname, funcitonname)
+  while true do--parser param
+    local tk1, c1, l1 = lex.getnexttoken()
+    if c1 ~= l1 then break end
+    lex.match(tkident)
+    emitter.emit_function_param(objectname, funcitonname, lex.gettokenstring())
+  end
+  while true do
+    local tk2 , c2, l2 = lex.getnexttoken()
+    if tk2 == tkend then break end
+    m.call_statement(objectname, functionname)
+  end
+  lex.match(tkend)
+end
+
+function m.lambda_statement(layer, objectname)
+end
+
+function m.assign_statement(layer)
+end
+
+function m.call_statement(objectname, functionname)
+  local left, name, token, c, l, variablename
+  lex.match(tkident)
+  left = lex.gettokenstring()
+  token = lex.getnexttoken()
+  while true do
+  name, c, l = lex.gettokenstring()
+  if c ~= l then break end
+  if token == tkassign then
+    right = m.assign_statement(objectname)
+    emitter.emit_object_variable(objectname, left, right)
+    break
+  elseif emitter.isvariable(name) then
+    variablename = name
+    lex.match(tkident)
+  elseif emitter.isfunction(name) then
+    emitter.emit_command(objectname, functionname, 'call', )
+  else--if is not variable or function ,then is a note
+    lex.match(tkident)
+  end
+end
+   
+end
+
+function m.object_statement(owner)
+	local objectname, left, right, operator, tk1, tk2, tk3, c, l
+	lex.match(tkobject)
+  lex.match(tkident)
+  objectname = lex.gettokenstring()
+  lex.match(tkless)
+  lex.match(tkident)
+  copyobjectname = lex.gettokenstring()
+  emitter.emit_object(objectname, copyobjectname, owner)
+	local token = lex.getnexttoken()
+  while token ~= tkend do
+    if token == tkobject then
+      m.object_statement(owner..'.'..objectname)
+    elseif token == tkfunction then
+      m.function_statement(layer, objectname)
+    elseif token == tkident then
+      m.call_statement(objectname, 'init')
+    else
+      m.error('object_statement()')
+    end
+    token = lex.getnexttoken()
+  end
+  lex.match(tkend)
+  emitter.emit_object_end(objectname)
+end
 end
 
 function m.number()
