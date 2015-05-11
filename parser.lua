@@ -1,22 +1,3 @@
---[[ bnf
-block -> statement
-statement -> assign-stmt| callfun-stmt |new-stmt
-new-stmt-> object-stmt := exp 因为函数调用允许没有括号，所以，要分清是调用还是取地址，要多加一个操作符
-exp-> term1 logicop term1|term1
-term1-> term asop term|term
-term -> factor mdop factor|factor
-factor-> (exp)|num|identifier|string|callfun-stmt
-asddop-> +|-
-mdop-> *|/|%
-num->0..9
-logicop-> <|>|=|>=|<=
-string->"xxoo"
-func-stmt ->  function ({statement})   end
-return-stmt -> return exp
-callfunc-stmt -> object-stmt({statement})|  object-stmt {statement} | object-stmt({statement}) {block}
-object-stmt -> Object functionname| Object.functionname|functionname(Object)| Object
-]]
-
 --什么运算符没有运算符，只有定义在OpereatorTable里面的优先级，如果在OT中有定义，需要parser完整个语句才生成操作，
 --不然的化直接生成操作
 
@@ -35,7 +16,7 @@ function m.load(filename)
   local f = io.open(filename, 'r')
   local s =  f:read('a')
   io.close(f)
-  s == 'object '..filename..' < Object\n'..s .. 'end'
+  s == 'object '..filename..' < Object\n'.. s .. 'end'
   local c = {
           ['source'] = s,
           ['name'] = filename,
@@ -69,9 +50,6 @@ function m.statement(owner)
 	end
 end
 
-function m.statement_statement()
-end
-
 function m.function_statement(layer, objectname)
   lex.match(tkfunction)
   local functionname
@@ -99,24 +77,28 @@ function m.assign_statement(layer)
 end
 
 function m.call_statement(objectname, functionname)
-  local left, name, token, c, l, variablename
+  local left, name, token, c, l, variablename, lastresult
   lex.match(tkident)
   left = lex.gettokenstring()
+
   token = lex.getnexttoken()
-  while true do
   name, c, l = lex.gettokenstring()
-  if c ~= l then break end
-  if token == tkassign then
-    right = m.assign_statement(objectname)
-    emitter.emit_object_variable(objectname, left, right)
-    break
-  elseif emitter.isvariable(name) then
-    variablename = name
+
+  if emitter.isvariable(name) then
+    left = leff..'.'..name
     lex.match(tkident)
-  elseif emitter.isfunction(name) then
-    emitter.emit_command(objectname, functionname, 'call', )
-  else--if is not variable or function ,then is a note
+  elseif token == tkassign then
+      right = m.assign_statement(objectname)
+      emitter.emit_object_variable(objectname, left, right)
+      return
+  end
+  
+  while true do
+    token = lex.getnexttoken()
+    name, c, l = lex.gettokenstring()
+    if c ~= l then break end
     lex.match(tkident)
+    left = emitter.emit_command(objectname, functionname, name, left, name)
   end
 end
    

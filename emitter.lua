@@ -20,8 +20,8 @@ function m.emit_object(object, parent, owner)
     ['parent'] = parent,
     ['owner'] = owner,
     ['end'] = false,
-		['function'] = {},
-		['start'] = {}
+	['function'] = {},
+	['start'] = {}
   }  
   
 end

@@ -11,11 +11,13 @@ object test < Object
 		end
 		def is 
 		end
-    def init
-    end
+    	def init
+    	end
 	end
 	anmeng = "anmeng"
-	My first name is anmeng
+	My name is anmeng
 	My age is 18
+	actor say "i'm the king, who are you"
+	actor want to go to foo map
 end
 

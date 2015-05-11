@@ -41,4 +41,13 @@ function OperatorTable.isinthislevel(op, level)
 	return false
 end
 
+function OperatorTable.isoperator(op)
+	for k,v in pairs(OperatorTable) do
+		for n,m in pairs(v) do
+			if m == op then return true end	
+		end
+	end
+	return false
+end
+
 return OperatorTable
